@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 
+from tqdm import tqdm
 import minio
 from dotenv import load_dotenv
 
@@ -8,9 +8,20 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+class Progress:
+
+
+    def set_meta(self, object_name: str, total_length):
+        self.tqdm = tqdm(total=total_length) 
+
+
+    def update(self, length):
+        self.tqdm.update(length)
+
+
 def upload_to_minio(
     minio_client: minio.Minio,
-    file_path: Path | str, 
+    file_path: str, 
     bucket_name: str,
     object_name: str
 ):
@@ -18,11 +29,16 @@ def upload_to_minio(
         print(f"бакет {bucket_name} не существует, создаем его")
         minio_client.make_bucket(bucket_name)
         print("бакет успешно создан")
-    minio_client.fput_object(
-        bucket_name=bucket_name,
-        object_name=object_name,
-        file_path=file_path
-    )
+    progress = Progress()
+    try: 
+        minio_client.fput_object(
+            bucket_name=bucket_name,
+            object_name=object_name,
+            file_path=file_path,
+            progress=progress
+        )
+    finally:
+        progress.tqdm.close()
 
 
 def main():
